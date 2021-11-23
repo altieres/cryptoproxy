@@ -4,46 +4,85 @@ const express = require('express')
 const app = express()
 const port = process.env.PORT || 3000
 
-const cacheTimeInMilis = 5000
-var cachedPrices = []
-var cacheLastUpdateTime = 0
+const priceCacheTimeInMilis = 5000
+var priceCached = []
+var priceCacheLastUpdateTime = 0
 
-async function updatePricesIfNecessary() {
-  if (new Date().getTime() < cacheLastUpdateTime + cacheTimeInMilis) return
+async function priceUpdateIfNecessary() {
+  if (new Date().getTime() < priceCacheLastUpdateTime + priceCacheTimeInMilis) return
 
-  const binancePricesUrl = 'https://api.binance.com/api/v3/ticker/price'
-  const binancePrices = await axios.get(binancePricesUrl)
+  const priceUrl = 'https://api.binance.com/api/v3/ticker/price'
+  const priceResponse = await axios.get(priceUrl)
 
-  cachedPrices = Object.fromEntries(
-    binancePrices.data.map(item => [item.symbol, item.price])
+  priceCached = Object.fromEntries(
+    priceResponse.data.map(item => [item.symbol, item.price])
   )
-  console.log('cache updated.')
+  console.log('prices cache updated.')
 
-  cacheLastUpdateTime = new Date().getTime()
+  priceCacheLastUpdateTime = new Date().getTime()
 }
 
-updatePricesIfNecessary()
-
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
-
-app.get('/binance', async (req, res) => {
+async function priceHandler(req, res) {
   try {
     const symbolUSDT = req.query.symbol.toUpperCase() + 'USDT'
     const symbolBTC = req.query.symbol.toUpperCase() + 'BTC'
     const symbolBTCUSDT = 'BTCUSDT'
   
-    await updatePricesIfNecessary()
+    await priceUpdateIfNecessary()
     console.log(`requested prices for ${symbolUSDT}`)
   
-    if (cachedPrices[symbolUSDT]) return res.send(cachedPrices[symbolUSDT].toString())
+    if (priceCached[symbolUSDT]) return res.send(priceCached[symbolUSDT].toString())
   
-    res.send((cachedPrices[symbolBTC] * cachedPrices[symbolBTCUSDT]).toString())
+    res.send((priceCached[symbolBTC] * priceCached[symbolBTCUSDT]).toString())
   } catch (e) {
     res.status(400).send('invalid symbol')
   }
+}
+
+const change24hCacheTimeInMilis = 30000
+var change24hCached = []
+var change24hCacheLastUpdateTime = 0
+
+async function change24hUpdateIfNecessary() {
+  if (new Date().getTime() < change24hCacheLastUpdateTime + change24hCacheTimeInMilis) return
+
+  const change24hUrl = 'https://api.binance.com/api/v3/ticker/24hr'
+  const change24hResponse = await axios.get(change24hUrl)
+
+  change24hCached = Object.fromEntries(
+    change24hResponse.data.map(item => [item.symbol, item.priceChangePercent])
+  )
+  console.log('change24h cache updated.')
+
+  change24hCacheLastUpdateTime = new Date().getTime()
+}
+
+async function change24hHandler(req, res) {
+  try {
+    const symbolUSDT = req.query.symbol.toUpperCase() + 'USDT'
+    const symbolBTC = req.query.symbol.toUpperCase() + 'BTC'
+    const symbolBTCUSDT = 'BTCUSDT'
+  
+    await change24hUpdateIfNecessary()
+    console.log(`requested change24h for ${symbolUSDT}`)
+  
+    if (change24hCached[symbolUSDT]) return res.send(change24hCached[symbolUSDT].toString())
+  
+    res.send((parseFloat(change24hCached[symbolBTC]) + parseFloat(change24hCached[symbolBTCUSDT])).toString())
+  } catch (e) {
+    res.status(400).send('invalid symbol')
+  }
+}
+
+app.get('/', (req, res) => {
+  res.send('Hello World!')
 })
+
+app.get('/binance', priceHandler)
+
+app.get('/binance/ticker/price', priceHandler)
+
+app.get('/binance/ticker/24hr', change24hHandler)
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)

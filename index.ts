@@ -4,12 +4,12 @@ import express from 'express'
 const app = express()
 const port = process.env.PORT || 3000
 
-const priceCacheTimeInMilis = 5000
+const priceCacheTimeInMillis = 5000
 var priceCached: any = []
 var priceCacheLastUpdateTime = 0
 
 async function priceUpdateIfNecessary() {
-  if (new Date().getTime() < priceCacheLastUpdateTime + priceCacheTimeInMilis) return
+  if (new Date().getTime() < priceCacheLastUpdateTime + priceCacheTimeInMillis) return
 
   const priceUrl = 'https://api.binance.com/api/v3/ticker/price'
   const priceResponse = await axios.get(priceUrl)
@@ -39,12 +39,12 @@ async function priceHandler(req: any, res: any) {
   }
 }
 
-const change24hCacheTimeInMilis = 30000
+const change24hCacheTimeInMillis = 30000
 var change24hCached: any = []
 var change24hCacheLastUpdateTime = 0
 
 async function change24hUpdateIfNecessary() {
-  if (new Date().getTime() < change24hCacheLastUpdateTime + change24hCacheTimeInMilis) return
+  if (new Date().getTime() < change24hCacheLastUpdateTime + change24hCacheTimeInMillis) return
 
   const change24hUrl = 'https://api.binance.com/api/v3/ticker/24hr'
   const change24hResponse = await axios.get(change24hUrl)

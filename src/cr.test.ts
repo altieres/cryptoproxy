@@ -1,78 +1,6 @@
-class Kline {
-  time: number = 0
-  open: number = 0
-  high: number = 0
-  low: number = 0
-  close: number = 0
-
-  constructor(init: Partial<Kline> | null = null) {
-    if (init !== null) Object.assign(this, init)
-  }
-
-  normalize(): Kline {
-    const divisor = this.open
-
-    return new Kline({
-      time: this.time,
-      open: (this.open / divisor - 1) * 100,
-      high: (this.high / divisor - 1) * 100,
-      low: (this.low / divisor - 1) * 100,
-      close: (this.close / divisor - 1) * 100,
-    }).fixed8()
-  }
-
-  allocate(value: number): Kline {
-    return new Kline({
-      time: this.time,
-      open: this.open * value,
-      high: this.high * value,
-      low: this.low * value,
-      close: this.close * value,
-    }).fixed8()
-  }
-
-  sum(other: Kline): Kline {
-    return new Kline({
-      time: this.time,
-      open: this.open + other.open,
-      high: this.high + other.high,
-      low: this.low + other.low,
-      close: this.close + other.close,
-    }).fixed8()
-  }
-
-  sumPercent(value: number): Kline {
-    return new Kline({
-      time: this.time,
-      open: this.open + value,
-      high: this.high + value,
-      low: this.low + value,
-      close: this.close + value,
-    }).fixed8()
-  }
-
-  offset(value: number): Kline {
-    if (this.open !== 0) throw 'offset only works on normalized klines (where open is equal to 0)'
-
-    return new Kline({
-      time: this.time,
-      open: value * (1 + this.open / 100),
-      high: value * (1 + this.high / 100),
-      low: value * (1 + this.low / 100),
-      close: value * (1 + this.close / 100),
-    }).fixed8()
-  }
-
-  fixed8(): Kline {
-    return new Kline({
-      time: this.time,
-      open: parseFloat((this.open).toFixed(8)),
-      high: parseFloat((this.high).toFixed(8)),
-      low: parseFloat((this.low).toFixed(8)),
-      close: parseFloat((this.close).toFixed(8)),
-    })
-  }
-}
+import Kline from './kline'
+import type { KlineMapArray, AllocationMap } from './cr'
+import { binanceToKline, computeAllocation, accumulate } from './cr'
 
 describe('kline computation', () => {
   test('binance to kline', () => {
@@ -142,49 +70,6 @@ describe('kline computation', () => {
   })
 })
 
-const computeAllocation = (symbolsAndValues: KlineMapArray, allocations: AllocationMap): Array<Kline> => {
-  const firstSymbolKey: string = Object.keys(symbolsAndValues)[0]
-
-  const symbolsByIndex = symbolsAndValues[firstSymbolKey].map((_: Kline, index: number) => {
-    return Object.entries(symbolsAndValues).map(([ symbol, value ]) => {
-      const kline = value[index]
-      const allocation = allocations[symbol][kline.time] || 0
-
-      return { symbol, kline, allocation }
-    })
-  })
-
-  const result = symbolsByIndex.map((symbolByIndex) => {
-    return symbolByIndex.reduce((prvKline, curr) => {
-      const currKline = curr.kline.normalize().allocate(curr.allocation)
-
-      return currKline.sum(prvKline)
-    }, new Kline())
-  })
-
-  return result
-}
-
-const accumulate = (klines: Array<Kline>): Array<Kline> => {
-  return klines.reduce((acc: Array<Kline>, curr: Kline) => {
-    const previousKline = acc.length === 0
-      ? new Kline()
-      : acc[acc.length - 1]
-
-    return acc.concat(curr.sumPercent(previousKline.close))
-  }, [])
-}
-
-const binanceToKline = (binanceKline: any) => {
-  return new Kline({
-    time: binanceKline[0],
-    open: parseFloat(binanceKline[1]),
-    high: parseFloat(binanceKline[2]),
-    low: parseFloat(binanceKline[3]),
-    close: parseFloat(binanceKline[4]),
-  })
-}
-
 const btcusdt1h: Array<any> = [
   [1640995200000, "40000.00000000", "41500.00000000", "39000.00000000", "41000.00000000", "2.00000000", 1641081599999, "1.00000000", 1, "1.00000000", "1.00000000", "0"],
   [1641081600000, "41000.00000000", "42500.00000000", "40000.00000000", "42000.00000000", "2.00000000", 1641167999999, "1.00000000", 1, "1.00000000", "1.00000000", "0"],
@@ -202,18 +87,6 @@ const coffeeusdt1h: Array<any> = [
   [1641081600000, "200.00000000", "205.00000000", "190.00000000", "240.00000000", "2.00000000", 1641167999999, "1.00000000", 1, "1.00000000", "1.00000000", "0"],
   [1641168000000, "240.00000000", "245.00000000", "210.00000000", "220.00000000", "2.00000000", 1641254399999, "1.00000000", 1, "1.00000000", "1.00000000", "0"],
 ]
-
-type KlineMapArray = {
-  [key: string]: Array<Kline>
-}
-
-type AllocationMap = {
-  [key: string]: AllocationObject
-}
-
-type AllocationObject = {
-  [key: number]: number
-}
 
 const klines1h: KlineMapArray = {
   btcusdt: btcusdt1h.map((b) => binanceToKline(b)),

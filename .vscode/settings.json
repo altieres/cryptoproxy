@@ -3,6 +3,7 @@
     "btcusdt",
     "coffeeusdt",
     "ethusdt",
-    "klines"
+    "klines",
+    "millis"
   ]
 }

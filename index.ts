@@ -1,8 +1,11 @@
 import axios from 'axios'
 import express from 'express'
+import cors from 'cors'
+import { crKlinesHandler } from './src/cr'
 
 const app = express()
 const port = process.env.PORT || 3000
+app.use(cors({ origin: 'http://localhost:3001' }))
 
 const priceCacheTimeInMillis = 5000
 var priceCached: any = []
@@ -83,6 +86,8 @@ app.get('/binance', priceHandler)
 app.get('/binance/ticker/price', priceHandler)
 
 app.get('/binance/ticker/24hr', change24hHandler)
+
+app.get('/cr/klines', crKlinesHandler)
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)

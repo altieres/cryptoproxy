@@ -1,6 +1,5 @@
 import Kline from './kline'
-import type { KlineMapArray, AllocationMap } from './cr'
-import { binanceToKline, computeAllocation, accumulate } from './cr'
+import { KlineMapArray, AllocationMap, binanceToKline, computeAllocation, accumulate } from './cr'
 
 describe('kline computation', () => {
   test('binance to kline', () => {
@@ -95,9 +94,9 @@ const klines1h: KlineMapArray = {
 }
 
 const allocation1h: AllocationMap = {
-  btcusdt:    { 1640995200000: 0.5, 1641081600000: 0.33333333, 1641168000000: 0.5 },
-  ethusdt:    { 1640995200000: 0.5, 1641081600000: 0.33333333, 1641168000000: 0.5 },
-  coffeeusdt: {                     1641081600000: 0.33333333, 1641168000000: 0   },
+  btcusdt:    [ [ 1640995200000, 0.5 ], [ 1641081600000, 0.33333333 ], [ 1641168000000, 0.5 ] ],
+  ethusdt:    [ [ 1640995200000, 0.5 ], [ 1641081600000, 0.33333333 ], [ 1641168000000, 0.5 ] ],
+  coffeeusdt: [                         [ 1641081600000, 0.33333333 ], [ 1641168000000, 0   ] ],
 }
 
 export { }

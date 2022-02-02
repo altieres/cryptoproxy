@@ -1,15 +1,34 @@
+import axios from 'axios'
 import Kline from './kline'
+import { allocation } from './cr_allocation'
 
 export type KlineMapArray = {
   [key: string]: Array<Kline>
 }
 
 export type AllocationMap = {
-  [key: string]: AllocationObject
+  [key: string]: AllocationItem[]
 }
 
-export type AllocationObject = {
-  [key: number]: number
+export type AllocationItem = [number, number]
+
+const validIntervals = ['1w', '4h', '1h']
+
+export const crKlinesHandler = async (req: any, res: any) => {
+  const interval = req.query.interval
+  if (!validIntervals.includes(interval))
+    return res.status(400).send(`invalid interval ${validIntervals.join(', ')}`)
+
+  const priceUrl = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${interval}&startTime=1640995200000`
+  const priceResponse = await axios.get(priceUrl)
+
+  console.log('interval', interval);
+  const initialKlines = {
+    'BTCUSDT': priceResponse.data.map((b: any) => binanceToKline(b))
+  }
+
+  const finalKlines = accumulate(computeAllocation(initialKlines, allocation))
+  res.send(finalKlines)
 }
 
 export const computeAllocation = (symbolsAndValues: KlineMapArray, allocations: AllocationMap): Array<Kline> => {
@@ -18,7 +37,7 @@ export const computeAllocation = (symbolsAndValues: KlineMapArray, allocations: 
   const symbolsByIndex = symbolsAndValues[firstSymbolKey].map((_: Kline, index: number) => {
     return Object.entries(symbolsAndValues).map(([ symbol, value ]) => {
       const kline = value[index]
-      const allocation = allocations[symbol][kline.time] || 0
+      const allocation = (allocations[symbol].filter((curr) => curr[0] <= kline.time.getTime()).reverse()[0] || [ 0, 0 ])[1]
 
       return { symbol, kline, allocation }
     })
@@ -47,7 +66,7 @@ export const accumulate = (klines: Array<Kline>): Array<Kline> => {
 
 export const binanceToKline = (binanceKline: any) => {
   return new Kline({
-    time: binanceKline[0],
+    time: new Date(binanceKline[0]),
     open: parseFloat(binanceKline[1]),
     high: parseFloat(binanceKline[2]),
     low: parseFloat(binanceKline[3]),

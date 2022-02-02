@@ -27,7 +27,7 @@ export const crKlinesHandler = async (req: any, res: any) => {
     'BTCUSDT': priceResponse.data.map((b: any) => binanceToKline(b))
   }
 
-  const finalKlines = accumulate(computeAllocation(initialKlines, allocation))
+  const finalKlines = accumulate(computeAllocation(initialKlines, allocation)).map((b: Kline) => b.sumPercent(100))
   res.send(finalKlines)
 }
 

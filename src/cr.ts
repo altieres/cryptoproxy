@@ -12,7 +12,7 @@ export type AllocationMap = {
 
 export type AllocationItem = [number, number]
 
-const validIntervals = ['1w', '4h', '1h']
+const validIntervals = ['1w', '1d', '4h', '1h']
 
 export const crKlinesHandler = async (req: any, res: any) => {
   const interval = req.query.interval
@@ -27,7 +27,7 @@ export const crKlinesHandler = async (req: any, res: any) => {
     'BTCUSDT': priceResponse.data.map((b: any) => binanceToKline(b))
   }
 
-  const finalKlines = accumulate(computeAllocation(initialKlines, allocation)).map((b: Kline) => b.sumPercent(100))
+  const finalKlines = accumulate(computeAllocation(initialKlines, allocation)).map((b: Kline) => b.sumPercent(100)).map((b: Kline) => { b.time = b.time / 1000; return b; } )
   res.send(finalKlines)
 }
 
@@ -37,7 +37,7 @@ export const computeAllocation = (symbolsAndValues: KlineMapArray, allocations: 
   const symbolsByIndex = symbolsAndValues[firstSymbolKey].map((_: Kline, index: number) => {
     return Object.entries(symbolsAndValues).map(([ symbol, value ]) => {
       const kline = value[index]
-      const allocation = (allocations[symbol].filter((curr) => curr[0] <= kline.time.getTime()).reverse()[0] || [ 0, 0 ])[1]
+      const allocation = (allocations[symbol].filter((curr) => curr[0] <= kline.time).reverse()[0] || [ 0, 0 ])[1]
 
       return { symbol, kline, allocation }
     })
@@ -66,7 +66,7 @@ export const accumulate = (klines: Array<Kline>): Array<Kline> => {
 
 export const binanceToKline = (binanceKline: any) => {
   return new Kline({
-    time: new Date(binanceKline[0]),
+    time: binanceKline[0],
     open: parseFloat(binanceKline[1]),
     high: parseFloat(binanceKline[2]),
     low: parseFloat(binanceKline[3]),

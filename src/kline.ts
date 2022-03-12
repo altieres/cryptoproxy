@@ -1,5 +1,5 @@
 class Kline {
-  time: Date = new Date(0)
+  time: number = 0
   open: number = 0
   high: number = 0
   low: number = 0
